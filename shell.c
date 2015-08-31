@@ -31,6 +31,25 @@ int cmd_cd(tok_t arg[]){
 
 }
 
+void execute(char *s, char *temp[]){
+  int status;
+  pid_t pid = fork();
+
+  if(pid<0){
+    printf("Error in creating child process: fork()");
+    exit(0);
+  }
+  else if(pid == 0){
+    if(execvp(s,temp)<0){
+      printf("Error in executing exe within child process: execvp()");
+      exit(1);
+    }
+  }
+  else{
+    while(wait(&status) != pid){} //wait for child to finish
+  }
+}
+
 int cmd_quit(tok_t arg[]) {
   printf("Bye\n");
   exit(0);
@@ -127,20 +146,26 @@ int shell (int argc, char *argv[]) {
   pid_t ppid = getppid();	/* get parents PID */
   pid_t cpid, tcpid, cpgid;
 
+  char cwd[1024];
+
   init_shell();
 
   printf("%s running as PID %d under %d\n",argv[0],pid,ppid);
 
   lineNum=0;
   fprintf(stdout, "%d: ", lineNum);
+  fprintf(stdout,"%s ", getcwd(cwd,sizeof(cwd)));//current working directory
   while ((s = freadln(stdin))){
     t = getToks(s); /* break the line into tokens */
     fundex = lookup(t[0]); /* Is first token a shell literal */
     if(fundex >= 0) cmd_table[fundex].fun(&t[1]);
     else {
-      fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
+      char *temp[] = {s,t[1],t[2]};//whole input stream
+      execute(s,temp);
+      //fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
     }
-    fprintf(stdout, "%d: ", lineNum);
+    fprintf(stdout, "%d: ", lineNum++);
+    fprintf(stdout,"%s ", getcwd(cwd,sizeof(cwd)));
   }
   return 0;
 }
