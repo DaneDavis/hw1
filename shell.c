@@ -52,80 +52,99 @@ void execute(char *s, char *temp[]){ //PART2
   }
 }
 
-int writeReadFiles(tok_t *t){
+bool writeReadFiles(tok_t *t){
 	tok_t *tokWork = t;
 	int loop;
-	char fileName;
+	char *fileName;
 
 
 	for(loop =0; loop< MAXTOKS;loop++){
-		if(tokWork[loop] == ">"){
+		if(tokWork[loop] != NULL && strcmp(tokWork[loop],">")==0){ //strcmp does comparison of strings, 0 being true
 			tokWork[loop] = NULL;
-			fileName = tokWork[loop +1];
+			fileName = tokWork[loop+1];
 
-			FILE *f = fopen(fileName,"wt"); //w for write, a to append, a+ open for append for update at EOF
+			FILE *f = fopen(fileName,"a+"); //w for write, a to append, a+ open for append for update at EOF
 
 			dup2(fileno(fileName),STDOUT_FILENO);
 			fclose(fileName);
-			return 1;
+			return(true);
 		}
-		else if(tokWork[loop] == "<"){
+		else if(strcmp(tokWork[loop],"<")==0){
 			tokWork[loop] = NULL;
 			fileName = tokWork[loop+1];
 			FILE *f = fopen(fileName,"wt");
 			
 			dup2(fileno(fileName),STDIN_FILENO);
 			fclose(fileName);
-			return 1;
+			return(true);
 		}
 	}
-	
-
-	return 0;
+	return(false);
 	
 }
 
 
 int exePath(char *s, tok_t *tokWork){ //PART3
 
-	//int status;
-  //pid_t pid = fork();
-	
-
-	
 	char *pathTemp = getenv("PATH"); //Gets the path 
 	tok_t *t = getToks(pathTemp); //Calls getToks from parse.c
-	int writeReadF = writeReadFiles(t); 
-	if(writeReadF == 0){
 	char work[PATH_MAX];
+	int loop;
+	int loop2;
+	FILE *f;
 
-			//PART4
-  //if(pid<0){
-   // printf("Error in creating child process: fork()");
-    //exit(0);
-  //}
-  //else if(pid == 0){ //fork successful
+	bool read = false, write = false;
 
+	char *fileName;
+
+	goto EXECCALL;
+
+	for(loop2=0;loop<MAXTOKS;loop++){
+		if(strcmp(tokWork[loop],">") == 0) {
+			tokWork[loop] = NULL;
+			fileName = tokWork[loop+1];
+
+			f = fopen(fileName,"a+");
+
+			write = true;
+
+			break; 
+		}
+		else if (strcmp(tokWork[loop],"<") == 0){
+			tokWork[loop] = NULL;
+			fileName = tokWork[loop+1];
+
+			f = fopen(fileName,"a+");
+
+			read = true;
+		
+			break;
+		}
+	}
+
+	if(write == true){
+		dup2(fileno(f),STDOUT_FILENO);
+		 goto EXECCALL;
+			fclose(fileName);
+		}
 	
-			int loop;
+		
+	else if(read == true){
+		dup2(fileno(f),STDIN_FILENO);
+		fclose(f);
+	}
+	else if(read == false && write == false){
 
-			for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS defined where?
+EXECCALL:	for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS assumed to be a set max token length
 				if(execv(work,tokWork)<0){
 					strcpy(work,t[loop]); // copies the part of path
 					strcat(work,"/");//concates a "/" onto the string to complete path
 					strcat(work,s); //conacates exe file name
 				}
 			}
-
-			
-			//freeToks(t);
-			//exit(1);
-		
-  //}
- //else{
-  //  while(wait(&status) != pid); //wait for child to finish
-  //}		
+	
 	}
+
 }
 
 
@@ -240,8 +259,9 @@ int shell (int argc, char *argv[]) {
     fundex = lookup(t[0]); /* Is first token a shell literal */
     if(fundex >= 0) cmd_table[fundex].fun(&t[1]);
     else {	
-      //char *temp = getenv("PATH");
       //char *temp[] = {s,t[1],t[2]};//whole input stream - part 2
+
+
 			pid_t cpid = fork();
 
 			if(cpid < 0){
@@ -253,12 +273,11 @@ int shell (int argc, char *argv[]) {
 				
 				exit(1);
 			}
-			wait(cpid);
-		
-      //exePath(t[0],t); //t[0] is the command, t is the entire set of tokens 	 
+			wait(cpid); //wait for child proccess to finish	 
       //execute(s,temp); // commented out because of part 3
       //fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
-    }
+   
+}
     fprintf(stdout, "%d: ", lineNum++);
     fprintf(stdout,"%s ", getcwd(cwd,sizeof(cwd)));
   }
