@@ -52,7 +52,7 @@ void execute(char *s, char *temp[]){ //PART2
   }
 }
 
-bool writeReadFiles(tok_t *t){
+/*bool writeReadFiles(tok_t *t){
 	tok_t *tokWork = t;
 	int loop;
 	char *fileName;
@@ -81,10 +81,10 @@ bool writeReadFiles(tok_t *t){
 	}
 	return(false);
 	
-}
+}*/
 
 
-int exePath(char *s, tok_t *tokWork){ //PART3
+ exePath(char *s, tok_t *tokWork){ //PART3 - PART4
 
 	char *pathTemp = getenv("PATH"); //Gets the path 
 	tok_t *t = getToks(pathTemp); //Calls getToks from parse.c
@@ -94,57 +94,64 @@ int exePath(char *s, tok_t *tokWork){ //PART3
 	FILE *f;
 
 	bool read = false, write = false;
+	bool standard = true;
 
 	char *fileName;
 
-	goto EXECCALL;
+	bool flag = false;
 
-	for(loop2=0;loop<MAXTOKS;loop++){
-		if(strcmp(tokWork[loop],">") == 0) {
-			tokWork[loop] = NULL;
-			fileName = tokWork[loop+1];
 
-			f = fopen(fileName,"a+");
+	for(loop2=0;loop2<MAXTOKS;loop2++){
+		if(strcmp(tokWork[loop2],">") == 0) {
+			tokWork[loop2] = NULL;
+			fileName = tokWork[loop2+1];
+
 
 			write = true;
+			standard = false;
 
 			break; 
 		}
-		else if (strcmp(tokWork[loop],"<") == 0){
-			tokWork[loop] = NULL;
-			fileName = tokWork[loop+1];
+		else if (strcmp(tokWork[loop2],"<") == 0){
+			tokWork[loop2] = NULL;
+			fileName = tokWork[loop2+1];
 
 			f = fopen(fileName,"a+");
 
 			read = true;
+			standard = false;
 		
 			break;
 		}
 	}
-
-	if(write == true){
-		dup2(fileno(f),STDOUT_FILENO);
-		 goto EXECCALL;
+	//printf("%d",standard);
+	if(standard == true){
+		EXECCALL: for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS assumed to be a set max token length
+								if(execv(work,tokWork)<0){
+									strcpy(work,t[loop]); // copies the part of path
+									strcat(work,"/");//concates a "/" onto the string to complete path
+									strcat(work,s); //conacates exe file name
+								}
+							}	
+	}
+	else{
+		if(write == true){
+      
+      f = fopen(fileName,"a+");
+      
+			dup2(fileno(f),STDOUT_FILENO);
+			goto EXECCALL;
 			fclose(fileName);
 		}
-	
-		
-	else if(read == true){
-		dup2(fileno(f),STDIN_FILENO);
-		fclose(f);
-	}
-	else if(read == false && write == false){
+		else if(read == true){
+			dup2(fileno(f),STDIN_FILENO);
+			goto EXECCALL;
+			fclose(f);
 
-EXECCALL:	for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS assumed to be a set max token length
-				if(execv(work,tokWork)<0){
-					strcpy(work,t[loop]); // copies the part of path
-					strcat(work,"/");//concates a "/" onto the string to complete path
-					strcat(work,s); //conacates exe file name
-				}
-			}
-	
 	}
+	
 
+}
 }
 
 
@@ -237,7 +244,15 @@ process* create_process(char* inputString)
 
 
 int shell (int argc, char *argv[]) {
-  char *s = malloc(INPUT_STRING_SIZE+1);			/* user input string */
+  char *s = malloc(INPUT_STRING_SIZE+1);	
+			/* user input string */
+
+	bool* part4 = false;
+
+	
+	
+	
+
   tok_t *t;			/* tokens parsed from input */
   int lineNum = 0;
   int fundex = -1;
@@ -255,13 +270,26 @@ int shell (int argc, char *argv[]) {
   fprintf(stdout, "%d: ", lineNum);
   fprintf(stdout,"%s ", getcwd(cwd,sizeof(cwd)));//current working directory
   while ((s = freadln(stdin))){
+		if(strstr(s,">") != NULL){
+			part4 = true;		
+		}
+	else if(strstr(s,"<") != NULL){
+		part4 = true;	
+	}
     t = getToks(s); /* break the line into tokens */
     fundex = lookup(t[0]); /* Is first token a shell literal */
     if(fundex >= 0) cmd_table[fundex].fun(&t[1]);
     else {	
       //char *temp[] = {s,t[1],t[2]};//whole input stream - part 2
+			
+			
+			//fprintf(stdout,"%d \n\n", part4);
 
-
+			if(part4 == false){
+				char *temp[] = {s,t[1],t[2]};
+				execute(s,temp);	
+			}
+		else if (part4 == true){
 			pid_t cpid = fork();
 
 			if(cpid < 0){
@@ -276,7 +304,8 @@ int shell (int argc, char *argv[]) {
 			wait(cpid); //wait for child proccess to finish	 
       //execute(s,temp); // commented out because of part 3
       //fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
-   
+			part4 = false;
+		}
 }
     fprintf(stdout, "%d: ", lineNum++);
     fprintf(stdout,"%s ", getcwd(cwd,sizeof(cwd)));
