@@ -52,25 +52,61 @@ void execute(char *s, char *temp[]){ //PART2
   }
 }
 
+int writeReadFiles(tok_t *t){
+	tok_t *tokWork = t;
+	int loop;
+	char fileName;
 
+
+	for(loop =0; loop< MAXTOKS;loop++){
+		if(tokWork[loop] == ">"){
+			tokWork[loop] = NULL;
+			fileName = tokWork[loop +1];
+
+			FILE *f = fopen(fileName,"wt"); //w for write, a to append, a+ open for append for update at EOF
+
+			dup2(fileno(fileName),STDOUT_FILENO);
+			fclose(fileName);
+			return 1;
+		}
+		else if(tokWork[loop] == "<"){
+			tokWork[loop] = NULL;
+			fileName = tokWork[loop+1];
+			FILE *f = fopen(fileName,"wt");
+			
+			dup2(fileno(fileName),STDIN_FILENO);
+			fclose(fileName);
+			return 1;
+		}
+	}
+	
+
+	return 0;
+	
+}
 
 
 int exePath(char *s, tok_t *tokWork){ //PART3
 
-	int status;
+	//int status;
   //pid_t pid = fork();
+	
+
 	
 	char *pathTemp = getenv("PATH"); //Gets the path 
 	tok_t *t = getToks(pathTemp); //Calls getToks from parse.c
-
+	int writeReadF = writeReadFiles(t); 
+	if(writeReadF == 0){
 	char work[PATH_MAX];
 
-
+			//PART4
   //if(pid<0){
    // printf("Error in creating child process: fork()");
     //exit(0);
   //}
   //else if(pid == 0){ //fork successful
+
+	
 			int loop;
 
 			for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS defined where?
@@ -89,7 +125,10 @@ int exePath(char *s, tok_t *tokWork){ //PART3
  //else{
   //  while(wait(&status) != pid); //wait for child to finish
   //}		
+	}
 }
+
+
 
 int cmd_quit(tok_t arg[]) {
   printf("Bye\n");
@@ -211,6 +250,7 @@ int shell (int argc, char *argv[]) {
 			}
 			else if(cpid == 0){
 				exePath(t[0],t);
+				
 				exit(1);
 			}
 			wait(cpid);
