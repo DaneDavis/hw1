@@ -52,44 +52,43 @@ void execute(char *s, char *temp[]){ //PART2
   }
 }
 
+
+
+
 int exePath(char *s, tok_t *tokWork){ //PART3
 
+	int status;
+  //pid_t pid = fork();
+	
 	char *pathTemp = getenv("PATH"); //Gets the path 
 	tok_t *t = getToks(pathTemp); //Calls getToks from parse.c
 
 	char work[PATH_MAX];
-	int loop;
 
-	int status;
-  pid_t pid = fork();
 
-	
+  //if(pid<0){
+   // printf("Error in creating child process: fork()");
+    //exit(0);
+  //}
+  //else if(pid == 0){ //fork successful
+			int loop;
 
-  if(pid<0){
-    printf("Error in creating child process: fork()");
-    exit(0);
-  }
-  else if(pid == 0){
-			printf("WE GOT HERE");
-			for(loop = 0; loop<MAXTOKS && pathTemp[loop];loop++){ //MAXTOKS defined where?
-				printf("GOTS HERE\n");
-				if(execv(work,tokWork) <0){
+			for(loop = 2; loop<MAXTOKS ;loop++){ //MAXTOKS defined where?
+				if(execv(work,tokWork)<0){
 					strcpy(work,t[loop]); // copies the part of path
 					strcat(work,"/");//concates a "/" onto the string to complete path
 					strcat(work,s); //conacates exe file name
 				}
-				else{
-					execv(work,tokWork);
-					printf("WE GOT HERE!!!\n")	;
-					break;
-				}
-			
 			}
-	exit(1);
-  }
-  else{
-    while(wait(&status) != pid){} //wait for child to finish
-  }		
+
+			
+			//freeToks(t);
+			//exit(1);
+		
+  //}
+ //else{
+  //  while(wait(&status) != pid); //wait for child to finish
+  //}		
 }
 
 int cmd_quit(tok_t arg[]) {
@@ -201,10 +200,22 @@ int shell (int argc, char *argv[]) {
     t = getToks(s); /* break the line into tokens */
     fundex = lookup(t[0]); /* Is first token a shell literal */
     if(fundex >= 0) cmd_table[fundex].fun(&t[1]);
-    else {
+    else {	
       //char *temp = getenv("PATH");
       //char *temp[] = {s,t[1],t[2]};//whole input stream - part 2
-      exePath(t[0],t); //t[0] is the command, t is the entire set of tokens 	 
+			pid_t cpid = fork();
+
+			if(cpid < 0){
+				fprintf(stdout,"Failure in creating child proccess: fork()");
+				exit(0);
+			}
+			else if(cpid == 0){
+				exePath(t[0],t);
+				exit(1);
+			}
+			wait(cpid);
+		
+      //exePath(t[0],t); //t[0] is the command, t is the entire set of tokens 	 
       //execute(s,temp); // commented out because of part 3
       //fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
     }
